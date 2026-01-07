@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<!-- PUTER.JS INTEGRATION -->
 <script src="https://js.puter.com/v2/"></script>
 
 <style>
@@ -268,7 +267,6 @@
 </head>
 <body>
 
-<!-- GLOBAL SVG REPOSITORY -->
 <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
   <defs>
     <linearGradient id="thunderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -285,7 +283,6 @@
     </filter>
   </defs>
 
-  <!-- ICONS -->
   <symbol id="icon-brand" viewBox="0 0 320 320">
     <path d="M170 60 L110 160 H150 L140 260 L220 140 H180 Z" fill="url(#thunderGrad)" filter="url(#glow)"/>
   </symbol>
@@ -293,7 +290,6 @@
   <symbol id="icon-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></symbol>
   <symbol id="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></symbol>
   
-  <!-- SPEAKER ICON FOR TTS -->
   <symbol id="icon-speaker" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
     <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
@@ -314,8 +310,7 @@
     </button>
     
     <div id="model-menu">
-      <!-- Options injected by JS -->
-    </div>
+      </div>
   </div>
 </header>
 
@@ -398,6 +393,31 @@ const System = {
       conf: "100%", 
       reason: "Boot Sequence" 
     }, 'ai');
+  },
+
+  // NEW: Auth Helper
+  // Checks if signed in. If not, prompts popup instead of redirecting
+  async ensureAuth() {
+    if (puter.auth.isSignedIn()) return true;
+    
+    UI.addMessage({ 
+      text: "Authenticating with Cloud Services...", 
+      conf: "Auth", 
+      reason: "Required for AI" 
+    }, 'ai');
+
+    try {
+      await puter.auth.signIn();
+      return true;
+    } catch (err) {
+      console.error(err);
+      UI.addMessage({ 
+        text: "Authentication failed or cancelled. Cannot use Cloud features.", 
+        conf: "Error", 
+        reason: "Auth Denied" 
+      }, 'ai');
+      return false;
+    }
   }
 };
 
@@ -617,7 +637,6 @@ const UI = {
     const msgContent = document.createElement("div");
     msgContent.className = 'msg-content';
 
-    let ttsBtn = '';
     // Only AI messages get the header and TTS
     if(type === 'ai') {
       const modelInfo = MODELS[System.activeModel];
@@ -726,6 +745,16 @@ const UI = {
     `;
     this.scrollToBottom();
 
+    // CHECK AUTH FIRST
+    const authorized = await System.ensureAuth();
+    if (!authorized) {
+       el.innerHTML = `<span style="color:#ef4444">Authentication required for Image Generation.</span>`;
+       System.isThinking = false;
+       this.input.disabled = false;
+       this.input.focus();
+       return;
+    }
+
     try {
       // Call Puter API
       const image = await puter.ai.txt2img(prompt);
@@ -753,18 +782,23 @@ const UI = {
   },
 
   // TTS HANDLING
-  playTTS(btn) {
+  async playTTS(btn) {
     if (System.currentAudio) {
       System.currentAudio.pause();
       System.currentAudio = null;
       // Reset all buttons
       document.querySelectorAll('.tts-btn').forEach(b => b.classList.remove('playing'));
+      return; // Stop here if just pausing
     }
 
     const container = btn.closest('.msg-content');
     const rawText = container.dataset.rawText;
     
     if(!rawText) return;
+
+    // CHECK AUTH FIRST
+    const authorized = await System.ensureAuth();
+    if (!authorized) return;
 
     btn.classList.add('playing');
 
