@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BRAINNOVA AI [Unified System]</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- PUTER.JS INTEGRATION -->
+<script src="https://js.puter.com/v2/"></script>
+
+<style>
+  /* --- THEME VARIABLES --- */
+  :root {
+    --bg-app: #09090b;
+    --bg-header: #000000;
+    --bg-input: #18181b;
+    --bg-user-bubble: #27272a;
+    --text-primary: #e4e4e7;
+    --text-secondary: #a1a1aa;
+    
+    /* Model Accents */
+    --accent-v1: #A3A3A3; /* Standard */
+    --accent-v2: #60a5fa; /* Reasoning Blue */
+    --accent-v25: #f472b6; /* Personality Pink */
+    --accent-v3: #4ade80; /* Data Green */
+    --accent-v4: #fbbf24; /* Intent Amber */
+    --accent-v5: #818cf8; /* Image Indigo */
+
+    --scrollbar-track: #18181b;
+    --scrollbar-thumb: #3f3f46;
+  }
+
+  body {
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* --- HEADER --- */
+  header {
+    background-color: var(--bg-header);
+    height: 64px;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    border-bottom: 1px solid #27272a;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 100;
+    justify-content: space-between;
+  }
+
+  .brand { 
+    font-weight: 700; 
+    font-size: 20px; 
+    letter-spacing: -0.5px; 
+    display: flex; 
+    align-items: center; 
+    gap: 12px;
+    color: #fff;
+  }
+  
+  .brand svg {
+    width: 32px;
+    height: 32px;
+    overflow: visible; 
+  }
+
+  /* Model Selector */
+  .model-selector { position: relative; }
+  
+  .model-btn {
+    background: #18181b;
+    color: #e3e3e3;
+    border: 1px solid #3f3f46;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: 0.2s all;
+  }
+  .model-btn:hover { border-color: #71717a; background: #27272a; }
+  .model-btn svg { width: 14px; height: 14px; opacity: 0.7; }
+
+  /* Dropdown */
+  #model-menu {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    width: 340px;
+    background: #18181b;
+    border: 1px solid #3f3f46;
+    border-radius: 12px;
+    padding: 6px;
+    display: none; 
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+    z-index: 101;
+  }
+  #model-menu.show { display: flex; animation: slideDown 0.15s ease-out; }
+  @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+  .model-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .model-option:hover { background: #27272a; }
+  .model-option.active { background: #27272a; border-color: #3f3f46; }
+
+  .opt-left { display: flex; flex-direction: column; }
+  .opt-name { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 2px;}
+  .opt-desc { font-size: 11px; color: #a1a1aa; line-height: 1.3; }
+  
+  .tag { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase; margin-left: 6px; }
+  .tag.v1 { background: rgba(163,163,163,0.2); color: var(--accent-v1); }
+  .tag.v2 { background: rgba(96,165,250,0.2); color: var(--accent-v2); }
+  .tag.v25 { background: rgba(244,114,182,0.2); color: var(--accent-v25); }
+  .tag.v3 { background: rgba(74,222,128,0.2); color: var(--accent-v3); }
+  .tag.v4 { background: rgba(251,191,36,0.2); color: var(--accent-v4); }
+  .tag.v5 { background: rgba(129, 140, 248, 0.2); color: var(--accent-v5); }
+
+  /* --- CHAT AREA --- */
+  main { flex: 1; display: flex; flex-direction: column; height: 100%; position: relative; width: 100%; }
+
+  #chat-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  #chat-container::-webkit-scrollbar { width: 8px; }
+  #chat-container::-webkit-scrollbar-track { background: var(--bg-app); }
+  #chat-container::-webkit-scrollbar-thumb { background-color: var(--scrollbar-thumb); border-radius: 4px; }
+
+  .msg-row { display: flex; gap: 16px; line-height: 1.6; font-size: 15px; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  
+  /* Avatar Styling */
+  .avatar { width: 36px; height: 36px; flex-shrink: 0; border-radius: 10px; overflow: hidden; display: grid; place-items: center; }
+  .avatar.user { background: #3f3f46; }
+  .avatar.ai { 
+    background: #1a1a1a; 
+    border: 1px solid #333; 
+    transition: 0.3s border-color, 0.3s box-shadow;
+  } 
+  
+  .avatar svg { width: 100%; height: 100%; display: block; }
+
+  .avatar.user svg { padding: 8px; box-sizing: border-box; }
+  .avatar.ai svg { width: 100%; height: 100%; }
+
+  .msg-content { flex: 1; min-width: 0; margin-top: 4px; }
+  
+  .user-row { flex-direction: row-reverse; }
+  .user-row .msg-content { 
+    background: var(--bg-user-bubble); 
+    padding: 8px 16px; 
+    border-radius: 16px; 
+    border-top-right-radius: 2px;
+    flex: unset; 
+    max-width: 80%;
+  }
+
+  .meta-header { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; font-size: 11px; font-family: monospace; letter-spacing: 0.5px; opacity: 0.7; }
+  .model-badge { font-weight: 700; padding: 1px 4px; border-radius: 3px; background: #27272a; border: 1px solid #3f3f46; color: #fff;}
+  .reasoning-text { color: var(--text-secondary); display: flex; align-items: center; gap: 4px;}
+  .reasoning-text::before { content: "›"; font-weight: bold; font-size: 14px; }
+  
+  .text-body ul { padding-left: 18px; margin: 8px 0; color: var(--text-secondary); }
+  .text-body b { color: #fff; font-weight: 600; }
+  .text-body code { background: #111; padding: 2px 5px; border-radius: 4px; font-family: monospace; border: 1px solid #333; color: #d4d4d8; font-size: 0.9em; }
+
+  /* TTS Button */
+  .tts-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s, background 0.2s;
+    margin-left: auto; /* Push to right */
+  }
+  .tts-btn:hover { color: #fff; background: #333; }
+  .tts-btn svg { width: 14px; height: 14px; }
+  .tts-btn.playing { color: var(--accent-v3); animation: pulse 1s infinite; }
+
+  /* Generated Image Styling */
+  .gen-image-container {
+    margin-top: 10px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #3f3f46;
+    max-width: 100%;
+    width: fit-content;
+  }
+  .gen-image-container img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* --- FOOTER --- */
+  footer { padding: 20px; display: flex; justify-content: center; background: var(--bg-app); border-top: 1px solid #27272a; }
+  
+  .input-wrapper {
+    background: var(--bg-input);
+    width: 100%; max-width: 800px;
+    border-radius: 16px;
+    display: flex; align-items: center;
+    padding: 4px 6px 4px 16px;
+    border: 1px solid #3f3f46;
+    transition: 0.2s all;
+  }
+  .input-wrapper:focus-within { border-color: var(--accent-v1); box-shadow: 0 0 0 2px rgba(163,163,163,0.1); }
+
+  input { flex: 1; background: transparent; border: none; padding: 12px 0; color: #fff; font-family: 'Space Grotesk', sans-serif; font-size: 16px; outline: none; }
+  
+  .send-btn { 
+    background: var(--text-primary); 
+    border: none; 
+    color: #000; 
+    width: 36px; height: 36px; 
+    border-radius: 10px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    cursor: pointer; 
+    transition: 0.2s; 
+    margin-left: 8px;
+  }
+  .send-btn:hover { transform: scale(1.05); background: #fff; }
+  .send-btn:disabled { background: #333; color: #555; cursor: not-allowed; transform: none;}
+  
+  .send-btn svg { width: 20px; height: 20px; }
+  
+  .cursor::after { content: "▋"; color: inherit; animation: blink 1s infinite; font-size: 0.8em; margin-left: 2px; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+</style>
+</head>
+<body>
+
+<!-- GLOBAL SVG REPOSITORY -->
+<svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
+  <defs>
+    <linearGradient id="thunderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#A3A3A3"/>
+    </linearGradient>
+
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- ICONS -->
+  <symbol id="icon-brand" viewBox="0 0 320 320">
+    <path d="M170 60 L110 160 H150 L140 260 L220 140 H180 Z" fill="url(#thunderGrad)" filter="url(#glow)"/>
+  </symbol>
+  <symbol id="icon-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></symbol>
+  <symbol id="icon-send" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></symbol>
+  <symbol id="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></symbol>
+  
+  <!-- SPEAKER ICON FOR TTS -->
+  <symbol id="icon-speaker" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+  </symbol>
+</svg>
+
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 320 320"><use href="#icon-brand"/></svg>
+    BRAINNOVA
+  </div>
+
+  <div class="model-selector">
+    <button class="model-btn" onclick="toggleMenu()">
+      <span id="current-model-label">v1.5 Standard</span> 
+      <svg viewBox="0 0 24 24"><use href="#icon-chevron"/></svg>
+    </button>
+    
+    <div id="model-menu">
+      <!-- Options injected by JS -->
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="chat-container"></div>
+  <footer>
+    <div class="input-wrapper">
+      <input id="input" placeholder="Interact with the system..." autocomplete="off" />
+      <button id="send-btn" class="send-btn" onclick="handleSend()">
+        <svg viewBox="0 0 24 24"><use href="#icon-send"/></svg>
+      </button>
+    </div>
+  </footer>
+</main>
+
+<script>
+/**
+ * BRAINNOVA CORE SYSTEM
+ * Enhanced with Puter.js (TTS & Image Generation)
+ */
+
+/* --- 1. CONFIGURATION & MODELS --- */
+const MODELS = {
+  v1_5: {
+    id: 'v1_5',
+    name: 'v1.5 Standard',
+    desc: 'Direct memory recall & implicit learning.',
+    color: '#A3A3A3',
+    tagClass: 'v1'
+  },
+  v2: {
+    id: 'v2',
+    name: 'v2 DeepThought',
+    desc: 'Associative logic & knowledge graph traversal.',
+    color: '#60a5fa',
+    tagClass: 'v2'
+  },
+  v2_5: {
+    id: 'v2_5',
+    name: 'v2.5 Persona',
+    desc: 'Emotional layer & personality directives.',
+    color: '#f472b6',
+    tagClass: 'v25'
+  },
+  v3: {
+    id: 'v3',
+    name: 'v3 Knowledge Loader',
+    desc: 'Bulk JSON ingestion & external packs.',
+    color: '#4ade80',
+    tagClass: 'v3'
+  },
+  v4: {
+    id: 'v4',
+    name: 'v4 Intent Analyst',
+    desc: 'Classifies user intent (Heuristic/Regex).',
+    color: '#fbbf24',
+    tagClass: 'v4'
+  },
+  v5_img: {
+    id: 'v5_img',
+    name: 'v5 Image Gen',
+    desc: 'Generates images via Puter API.',
+    color: '#818cf8',
+    tagClass: 'v5'
+  }
+};
+
+/* --- 2. GLOBAL STATE --- */
+const System = {
+  activeModel: 'v1_5',
+  isThinking: false,
+  pendingSave: null,
+  currentAudio: null,
+  
+  init() {
+    Memory.load();
+    UI.renderMenu();
+    UI.addMessage({ 
+      text: "System initialized.\nBrainnova Core online.", 
+      conf: "100%", 
+      reason: "Boot Sequence" 
+    }, 'ai');
+  }
+};
+
+/* --- 3. MEMORY SYSTEM (Storage Layer) --- */
+const Memory = {
+  data: {},
+  KEY: 'brainnova_core_v2',
+
+  load() {
+    const raw = localStorage.getItem(this.KEY);
+    this.data = raw ? JSON.parse(raw) : {};
+    if(Object.keys(this.data).length === 0) {
+      this.save("brainnova", { core: "A modular, browser-based AI architecture.", why: "To demonstrate offline capabilities.", how: ["Javascript", "HTML", "CSS"] });
+    }
+  },
+
+  save(topic, infoObj) {
+    this.data[topic.toLowerCase()] = infoObj;
+    this.persist();
+  },
+
+  persist() {
+    localStorage.setItem(this.KEY, JSON.stringify(this.data));
+  },
+
+  get(topic) {
+    return this.data[topic.toLowerCase()] || null;
+  },
+
+  getAllKeys() {
+    return Object.keys(this.data);
+  },
+
+  reset() {
+    localStorage.removeItem(this.KEY);
+    this.data = {};
+    this.persist();
+  }
+};
+
+/* --- 4. MODEL ENGINES --- */
+const ModelEngine = {
+  findTopic(text) {
+    const lower = text.toLowerCase();
+    const keys = Memory.getAllKeys().sort((a,b) => b.length - a.length);
+    return keys.find(k => new RegExp(`\\b${k}\\b`, 'i').test(lower));
+  },
+
+  runV1_5(text, lower) {
+    if(System.pendingSave) return this.handleLearning(lower);
+    const topic = this.findTopic(text);
+    if(topic) {
+      const data = Memory.get(topic);
+      return { text: `**${topic}**: ${data.core}`, reason: `Direct Hit [${topic}]`, conf: "98%" };
+    }
+    const defMatch = text.match(/^([\w\s]+)\s+(?:is|means)\s+(.+)$/i);
+    if(defMatch && !text.includes('?')) {
+      const t = defMatch[1].trim().toLowerCase();
+      const d = defMatch[2].trim();
+      System.pendingSave = { topic: t, core: d };
+      return { text: `I don't know **${t}**. You defined it as: "${d}".\nSave this to memory?`, reason: "Pattern Detection: Definition", conf: "Wait" };
+    }
+    return this.fallback();
+  },
+
+  runV2(text, lower) {
+    const mainTopic = this.findTopic(text);
+    if(!mainTopic) return this.fallback();
+    const data = Memory.get(mainTopic);
+    let output = `Analysis of **${mainTopic}**:\n${data.core}`;
+    let connections = [];
+    const otherKeys = Memory.getAllKeys().filter(k => k !== mainTopic);
+    otherKeys.forEach(k => {
+      if(data.core.toLowerCase().includes(k) || (data.why && data.why.toLowerCase().includes(k))) connections.push(k);
+    });
+    if(connections.length > 0) output += `\n\n**Related Nodes detected:**\n` + connections.map(c => `• ${c} (${Memory.get(c).core.substring(0,40)}...)`).join('\n');
+    else output += `\n\n*No secondary associations found in current graph.*`;
+    return { text: output, reason: `Graph Traversal [${mainTopic}] -> [${connections.length} Edges]`, conf: "92%" };
+  },
+
+  runV2_5(text, lower) {
+    const baseResult = this.runV1_5(text, lower);
+    const prefixes = ["Listen carefully,", "Here's the situation:", "Interestingly enough,"];
+    const suffixes = ["Hope that helps!", "Any other questions?", "Data is beautiful, isn't it?"];
+    const p = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const s = suffixes[Math.floor(Math.random() * suffixes.length)];
+    return { text: `${p} ${baseResult.text}\n\n${s}`, reason: `v1.5 Logic + Personality Filter`, conf: baseResult.conf };
+  },
+
+  runV3(text, lower) {
+    if(lower.startsWith("install:")) {
+      const packName = lower.replace("install:", "").trim();
+      if(packName === "basic") {
+        Memory.save("internet", { core: "Global network of networks.", why: "Communication", how: ["TCP/IP"] });
+        Memory.save("html", { core: "HyperText Markup Language.", why: "Structure web pages", how: ["Tags", "Elements"] });
+        return { text: "Pack [BASIC] installed: Internet, HTML added.", reason: "Batch Import", conf: "100%" };
+      }
+      return { text: `Pack '${packName}' not found in local repository.`, reason: "IO Error", conf: "0%" };
+    }
+    if(text.startsWith("{")) {
+      try {
+        const obj = JSON.parse(text);
+        if(obj.topic && obj.core) {
+          Memory.save(obj.topic, obj);
+          return { text: `Manual JSON injection successful for **${obj.topic}**.`, reason: "JSON Parse Success", conf: "100%" };
+        }
+      } catch(e) { return { text: "Invalid JSON format.", reason: "Syntax Error", conf: "0%" }; }
+    }
+    return { text: "v3 Mode Active. Waiting for data.\nCommands:\n• `install: basic`\n• Paste `{ \"topic\": \"x\", \"core\": \"y\" }`", reason: "Idle / Listening for Data", conf: "100%" };
+  },
+
+  runV4(text, lower) {
+    let intent = "UNKNOWN";
+    let analysis = "";
+    if(text.includes("?")) { intent = "QUERY"; analysis = "User is seeking information."; }
+    else if(lower.startsWith("please") || lower.match(/^(make|do|create|reset)/)) { intent = "COMMAND"; analysis = "User is issuing a directive."; }
+    else if(lower.includes("is a") || lower.includes("means")) { intent = "TEACHING"; analysis = "User is providing data."; }
+    else { intent = "STATEMENT"; analysis = "Conversational filler or declaration."; }
+    return { text: `Intent Detected: **${intent}**\nAnalysis: ${analysis}\n\nOriginal Input Length: ${text.length} chars.`, reason: `Heuristic Classification Engine`, conf: "85%" };
+  },
+
+  // New Image Gen Model
+  runV5_Img(text) {
+    return { 
+      type: 'image', 
+      prompt: text,
+      text: `Generating image for: "${text}"`,
+      reason: "Puter API / Nano Banana", 
+      conf: "Cloud" 
+    };
+  },
+
+  handleLearning(lower) {
+    if(lower.match(/\b(yes|ok|save)\b/)) {
+      Memory.save(System.pendingSave.topic, { core: System.pendingSave.core, why: "Learned from user", how: [] });
+      const t = System.pendingSave.topic;
+      System.pendingSave = null;
+      return { text: `Saved **${t}** to permanent storage.`, reason: "Write Operation", conf: "100%" };
+    } else {
+      System.pendingSave = null;
+      return { text: "Memory discarded.", reason: "Abort", conf: "100%" };
+    }
+  },
+
+  fallback() {
+    return { text: "I have no data on this. You can teach me using 'Topic is Definition'.", reason: "Index Lookup Failed", conf: "0%" };
+  }
+};
+
+/* --- 5. CENTRAL PROCESSOR --- */
+function think(input) {
+  const text = input.trim();
+  const lower = text.toLowerCase();
+
+  if(lower === "reset") { Memory.reset(); return { text: "SYSTEM PURGE COMPLETE.", reason: "Hard Reset", conf: "100%" }; }
+  if(lower === "help") { return { text: "Commands: `reset` (Wipe DB), `help`.\nModels: Switch via menu top right.", reason: "System Info", conf: "100%" }; }
+
+  const mode = System.activeModel;
+  switch(mode) {
+    case 'v1_5': return ModelEngine.runV1_5(text, lower);
+    case 'v2':   return ModelEngine.runV2(text, lower);
+    case 'v2_5': return ModelEngine.runV2_5(text, lower);
+    case 'v3':   return ModelEngine.runV3(text, lower);
+    case 'v4':   return ModelEngine.runV4(text, lower);
+    case 'v5_img': return ModelEngine.runV5_Img(text);
+    default: return ModelEngine.runV1_5(text, lower);
+  }
+}
+
+/* --- 6. UI CONTROLLER --- */
+const UI = {
+  chatBox: document.getElementById("chat-container"),
+  input: document.getElementById("input"),
+  sendBtn: document.getElementById("send-btn"),
+  menu: document.getElementById("model-menu"),
+
+  renderMenu() {
+    this.menu.innerHTML = Object.values(MODELS).map(m => `
+      <div class="model-option ${System.activeModel === m.id ? 'active' : ''}" onclick="UI.switchModel('${m.id}')">
+        <div class="opt-left">
+          <div class="opt-name">${m.name} <span class="tag ${m.tagClass}">${m.id}</span></div>
+          <div class="opt-desc">${m.desc}</div>
+        </div>
+      </div>
+    `).join('');
+    
+    const cur = MODELS[System.activeModel];
+    document.getElementById("current-model-label").innerText = cur.name;
+    document.documentElement.style.setProperty('--accent-v1', cur.color);
+  },
+
+  switchModel(id) {
+    System.activeModel = id;
+    this.toggleMenu();
+    this.renderMenu();
+    this.addMessage({ text: `Switched to **${MODELS[id].name}**.\nMode: ${MODELS[id].desc}`, conf: "100%", reason: "Context Switch" }, 'ai');
+  },
+
+  toggleMenu() { this.menu.classList.toggle('show'); },
+
+  addMessage(content, type) {
+    const row = document.createElement("div");
+    row.className = `msg-row ${type === 'user' ? 'user-row' : 'ai-row'}`;
+    
+    const avatar = document.createElement("div");
+    avatar.className = `avatar ${type}`;
+    
+    if(type === 'user') {
+      avatar.innerHTML = `<svg viewBox="0 0 24 24"><use href="#icon-user"/></svg>`;
+    } else {
+      const color = MODELS[System.activeModel].color;
+      avatar.style.borderColor = color;
+      avatar.style.boxShadow = `0 0 10px ${color}33`; 
+      avatar.innerHTML = `<svg viewBox="0 0 320 320"><use href="#icon-brand"/></svg>`;
+    }
+
+    const msgContent = document.createElement("div");
+    msgContent.className = 'msg-content';
+
+    let ttsBtn = '';
+    // Only AI messages get the header and TTS
+    if(type === 'ai') {
+      const modelInfo = MODELS[System.activeModel];
+      
+      msgContent.innerHTML = `
+        <div class="meta-header" style="color:${modelInfo.color}">
+          <span class="model-badge" style="border-color:${modelInfo.color}; color:${modelInfo.color}">${modelInfo.id.toUpperCase()}</span>
+          <span class="reasoning-text">${content.reason}</span>
+          <button class="tts-btn" title="Speak Response" onclick="UI.playTTS(this)">
+            <svg viewBox="0 0 24 24"><use href="#icon-speaker"/></svg>
+          </button>
+        </div>
+      `;
+    }
+
+    const textBody = document.createElement("div");
+    textBody.className = 'text-body';
+    msgContent.appendChild(textBody);
+    
+    row.appendChild(avatar);
+    row.appendChild(msgContent);
+    this.chatBox.appendChild(row);
+
+    if(type === 'user') {
+      textBody.textContent = content;
+      this.scrollToBottom();
+    } else {
+      // Handle Image Generation vs Text
+      if(content.type === 'image') {
+        this.generateImage(textBody, content.prompt);
+      } else {
+        this.typeText(textBody, content.text);
+      }
+    }
+  },
+
+  typeText(el, text) {
+    System.isThinking = true;
+    el.classList.add('cursor');
+    this.input.disabled = true;
+
+    // Store raw text for TTS extraction later
+    el.parentElement.dataset.rawText = text.replace(/\*\*/g, '');
+
+    const parts = text.split(/(\*\*.*?\*\*|\n)/g);
+    let queue = [];
+    
+    parts.forEach(p => {
+      if(p === '\n') queue.push('<br>');
+      else if(p.startsWith('**')) queue.push(`<b>${p.replace(/\*\*/g, '')}</b>`);
+      else queue.push(p);
+    });
+
+    let finalHTML = "";
+    let i = 0;
+    
+    const interval = setInterval(() => {
+      if(i < queue.length) {
+        finalHTML += queue[i];
+        el.innerHTML = finalHTML;
+        i++;
+        this.scrollToBottom();
+      } else {
+        clearInterval(interval);
+        el.classList.remove('cursor');
+        System.isThinking = false;
+        this.input.disabled = false;
+        this.input.focus();
+      }
+    }, 40);
+  },
+
+  // IMAGE GENERATION HANDLING
+  async generateImage(el, prompt) {
+    System.isThinking = true;
+    this.input.disabled = true;
+    
+    // Inject Thinking SVG
+    el.innerHTML = `
+      <div class="gen-loading">
+        <svg width="240" height="64" viewBox="0 0 240 64" xmlns="http://www.w3.org/2000/svg">
+          <style>
+            .dot { animation: wave 1.6s infinite ease-in-out; }
+            .d1 { animation-delay: 0s; }
+            .d2 { animation-delay: 0.2s; }
+            .d3 { animation-delay: 0.4s; }
+            @keyframes wave {
+              0%   { transform: translateY(0); opacity: 0.3; }
+              35%  { transform: translateY(-6px); opacity: 1; }
+              70%  { transform: translateY(0); opacity: 0.4; }
+              100% { opacity: 0.3; }
+            }
+          </style>
+          <defs>
+            <linearGradient id="dotGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="100%" stop-color="#9ca3af"/>
+            </linearGradient>
+          </defs>
+          <text x="16" y="40" style="font-family: 'Space Grotesk', sans-serif; font-size: 16px; fill: #e5e7eb; letter-spacing: 0.06em;">Thinking</text>
+          <circle class="dot d1" cx="140" cy="36" r="3.2" fill="url(#dotGrad)" />
+          <circle class="dot d2" cx="154" cy="36" r="3.2" fill="url(#dotGrad)" />
+          <circle class="dot d3" cx="168" cy="36" r="3.2" fill="url(#dotGrad)" />
+        </svg> 
+      </div>
+    `;
+    this.scrollToBottom();
+
+    try {
+      // Call Puter API
+      const image = await puter.ai.txt2img(prompt);
+      const imgElement = document.createElement('img');
+      imgElement.src = image.src;
+      imgElement.alt = prompt;
+      
+      // Wrap in container
+      const container = document.createElement('div');
+      container.className = 'gen-image-container';
+      container.appendChild(imgElement);
+      
+      el.innerHTML = '';
+      el.appendChild(container);
+      el.parentElement.dataset.rawText = `Generated image of ${prompt}`; // For TTS
+      
+    } catch (err) {
+      el.innerHTML = `<span style="color:#ef4444">Error generating image: ${err.message}</span>`;
+    }
+
+    System.isThinking = false;
+    this.input.disabled = false;
+    this.input.focus();
+    this.scrollToBottom();
+  },
+
+  // TTS HANDLING
+  playTTS(btn) {
+    if (System.currentAudio) {
+      System.currentAudio.pause();
+      System.currentAudio = null;
+      // Reset all buttons
+      document.querySelectorAll('.tts-btn').forEach(b => b.classList.remove('playing'));
+    }
+
+    const container = btn.closest('.msg-content');
+    const rawText = container.dataset.rawText;
+    
+    if(!rawText) return;
+
+    btn.classList.add('playing');
+
+    puter.ai.txt2speech(rawText, { voice: 'Stephen' })
+      .then(audio => {
+        System.currentAudio = audio;
+        audio.play();
+        audio.onended = () => {
+          btn.classList.remove('playing');
+          System.currentAudio = null;
+        };
+      })
+      .catch(err => {
+        console.error("TTS Error", err);
+        btn.classList.remove('playing');
+      });
+  },
+
+  scrollToBottom() { this.chatBox.scrollTop = this.chatBox.scrollHeight; }
+};
+
+/* --- 7. EVENT LISTENERS --- */
+function toggleMenu() { UI.toggleMenu(); }
+
+function handleSend() {
+  const val = UI.input.value;
+  if(!val || System.isThinking) return;
+  UI.input.value = "";
+  UI.addMessage(val, 'user');
+  setTimeout(() => {
+    const response = think(val);
+    UI.addMessage(response, 'ai');
+  }, 600);
+}
+
+UI.input.addEventListener("keypress", (e) => {
+  if(e.key === "Enter") handleSend();
+});
+
+System.init();
+
+</script>
+</body>
+</html>
